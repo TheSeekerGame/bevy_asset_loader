@@ -56,6 +56,13 @@ pub enum StandardDynamicAsset {
     },
 }
 
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(untagged)]
+pub enum ExtendedStandardDynamicAsset {
+    Collection(Vec<StandardDynamicAsset>),
+    Single(StandardDynamicAsset),
+}
+
 impl DynamicAsset for StandardDynamicAsset {
     fn load(&self, asset_server: &AssetServer) -> Vec<HandleUntyped> {
         match self {
@@ -143,13 +150,29 @@ impl DynamicAsset for StandardDynamicAsset {
     }
 }
 
+impl DynamicAsset for ExtendedStandardDynamicAsset {
+    fn load(&self, asset_server: &AssetServer) -> Vec<HandleUntyped> {
+        match self {
+            ExtendedStandardDynamicAsset::Single(asset) => asset.load(asset_server),
+            ExtendedStandardDynamicAsset::Collection(_asset_list) => todo!(),
+        }
+    }
+
+    fn build(&self, world: &mut World) -> Result<DynamicAssetType, anyhow::Error> {
+        match self {
+            ExtendedStandardDynamicAsset::Single(asset) => asset.build(world),
+            ExtendedStandardDynamicAsset::Collection(_asset_list) => todo!(),
+        }
+    }
+}
+
 /// The asset defining a mapping from asset keys to dynamic assets
 ///
 /// These assets are loaded at the beginning of a loading state
 /// and combined in [`DynamicAssets`](DynamicAssets).
 #[derive(serde::Deserialize, TypeUuid)]
 #[uuid = "2df82c01-9c71-4aa8-adc4-71c5824768f1"]
-pub struct StandardDynamicAssetCollection(pub HashMap<String, StandardDynamicAsset>);
+pub struct StandardDynamicAssetCollection(pub HashMap<String, ExtendedStandardDynamicAsset>);
 
 impl DynamicAssetCollection for StandardDynamicAssetCollection {
     fn register(&self, dynamic_assets: &mut DynamicAssets) {
